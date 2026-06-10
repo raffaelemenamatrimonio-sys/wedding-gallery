@@ -7,6 +7,7 @@ type MediaItem = {
   id: string;
   file_url: string;
   file_type: "image" | "video";
+  preferred?: boolean;
 };
 
 export default function AdminPage() {
@@ -42,6 +43,91 @@ export default function AdminPage() {
     }
   }
 
+  async function handleDelete(
+    id: string,
+    fileUrl: string
+  ) {
+    const confirmed = window.confirm(
+      "Sei sicuro di voler eliminare questo ricordo?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch("/api/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id,
+          fileUrl,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        console.error(result);
+
+        alert(
+          result.error ||
+            "Errore durante l'eliminazione."
+        );
+
+        return;
+      }
+
+      alert("Ricordo eliminato.");
+
+      fetchMedia();
+    } catch (error) {
+      console.error(error);
+
+      alert(
+        "Errore durante l'eliminazione."
+      );
+    }
+  }
+
+  async function toggleFavorite(
+    id: string,
+    preferred: boolean
+  ) {
+    try {
+      const response = await fetch(
+        "/api/favorite",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            id,
+            preferred: !preferred,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        alert(
+          "Errore aggiornamento preferiti."
+        );
+
+        return;
+      }
+
+      fetchMedia();
+    } catch (error) {
+      console.error(error);
+
+      alert(
+        "Errore aggiornamento preferiti."
+      );
+    }
+  }
+
   if (!authenticated) {
     return (
       <main className="min-h-screen bg-[#F8F5EF] flex items-center justify-center p-8">
@@ -54,7 +140,9 @@ export default function AdminPage() {
             type="password"
             placeholder="Inserisci la password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) =>
+              setPassword(e.target.value)
+            }
             className="w-full border rounded-xl px-4 py-3 mb-4"
           />
 
@@ -68,59 +156,6 @@ export default function AdminPage() {
       </main>
     );
   }
-
-async function handleDelete(
-  id: string,
-  fileUrl: string
-) {
-  const confirmed = window.confirm(
-    "Sei sicuro di voler eliminare questo ricordo?"
-  );
-
-  if (!confirmed) return;
-
-  try {
-    const response = await fetch(
-      "/api/delete",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type":
-            "application/json",
-        },
-        body: JSON.stringify({
-          id,
-          fileUrl,
-        }),
-      }
-    );
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      console.error(result);
-      alert(
-        result.error ||
-        "Errore durante l'eliminazione."
-      );
-      return;
-    }
-
-  
-    alert("Ricordo eliminato.");
-
-    fetchMedia();
-  } catch (error) {
-    console.error(error);
-
-    alert(
-      "Errore durante l'eliminazione."
-    );
-  }
-}
-
-
-
 
   return (
     <main className="min-h-screen bg-[#F8F5EF] p-8">
@@ -146,42 +181,73 @@ async function handleDelete(
                   className="w-full"
                 />
               ) : (
-                <video controls className="w-full">
-                  <source src={item.file_url} />
+                <video
+                  controls
+                  className="w-full"
+                >
+                  <source
+                    src={item.file_url}
+                  />
                 </video>
               )}
 
-<div className="p-4 space-y-2">
-  <a
-    href={item.file_url}
-    download
-    target="_blank"
-    rel="noopener noreferrer"
-    className="block w-full text-center bg-[#C9A227] text-white py-2 rounded-xl"
-  >
-    ⬇️ Scarica
-  </a>
+              <div className="p-4 space-y-2">
+                <a
+                  href={item.file_url}
+                  download
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full text-center bg-[#C9A227] text-white py-2 rounded-xl"
+                >
+                  ⬇️ Scarica
+                </a>
 
-  <button
-    onClick={() =>
-      handleDelete(
-        item.id,
-        item.file_url
-      )
-    }
-    className="
-      w-full
-      bg-red-600
-      text-white
-      py-2
-      rounded-xl
-      hover:bg-red-700
-      transition
-    "
-  >
-    🗑️ Elimina
-  </button>
-</div>
+                <button
+                  onClick={() =>
+                    handleDelete(
+                      item.id,
+                      item.file_url
+                    )
+                  }
+                  className="
+                    w-full
+                    bg-red-600
+                    text-white
+                    py-2
+                    rounded-xl
+                    hover:bg-red-700
+                    transition
+                  "
+                >
+                  🗑️ Elimina
+                </button>
+
+                <button
+                  onClick={() =>
+                    toggleFavorite(
+                      item.id,
+                      item.preferred ||
+                        false
+                    )
+                  }
+                  className={`
+                    w-full
+                    py-2
+                    rounded-xl
+                    text-white
+                    transition
+                    ${
+                      item.preferred
+                        ? "bg-yellow-500 hover:bg-yellow-600"
+                        : "bg-gray-400 hover:bg-gray-500"
+                    }
+                  `}
+                >
+                  {item.preferred
+                    ? "⭐ Preferita"
+                    : "☆ Imposta Preferita"}
+                </button>
+              </div>
             </div>
           ))}
         </div>

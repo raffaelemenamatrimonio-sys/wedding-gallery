@@ -15,9 +15,13 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [uploading, setUploading] = useState(false);
+  const [showThankYou, setShowThankYou] =
+  useState(false);
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [open, setOpen] = useState(false);
 const [index, setIndex] = useState(0);
+const [selectedVideo, setSelectedVideo] =
+  useState<string | null>(null);
 
   useEffect(() => {
     fetchMedia();
@@ -88,12 +92,16 @@ const [index, setIndex] = useState(0);
 
       await fetchMedia();
 
-      alert(
-        "❤️ Grazie! I tuoi ricordi sono stati condivisi."
-      );
+      setShowThankYou(true);
+
+setTimeout(() => {
+  setShowThankYou(false);
+}, 5000);
     } catch (err) {
       console.error(err);
-      alert("Si è verificato un errore.");
+     console.error(
+  "Errore durante il caricamento."
+);
     }
 
     setUploading(false);
@@ -104,6 +112,9 @@ const [index, setIndex] = useState(0);
   };
   const imageMedia = media.filter(
   (item) => item.file_type === "image"
+);
+const videoMedia = media.filter(
+  (item) => item.file_type === "video"
 );
 
 const slides = imageMedia.map((item) => ({
@@ -144,20 +155,36 @@ const slides = imageMedia.map((item) => ({
           className="bg-[#0F4C5C] hover:opacity-90 text-white px-8 py-4 rounded-xl transition"
         >
           {uploading
-            ? "Caricamento..."
-            : "📸 Condividi i tuoi ricordi"}
+  ? "✨ Stiamo salvando i vostri ricordi..."
+  : "📸 Condividi i tuoi ricordi"}
         </button>
 
         <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*,video/*"
-          multiple
-          className="hidden"
-          onChange={handleUpload}
-        />
-      </div>
-    </section>
+  ref={fileInputRef}
+  type="file"
+  accept="image/*,video/*"
+  multiple
+  className="hidden"
+  onChange={handleUpload}
+/>
+
+{showThankYou && (
+  <div className="mt-6 max-w-lg bg-white/90 backdrop-blur rounded-2xl p-6 shadow-xl">
+    <p className="text-[#0F4C5C] text-lg font-serif">
+      ❤️ Grazie per aver condiviso
+      questo momento speciale con noi.
+    </p>
+
+    <p className="text-gray-600 mt-2">
+      I vostri ricordi renderanno
+      questa giornata ancora più
+      indimenticabile.
+    </p>
+  </div>
+)}
+
+</div>
+</section>
 
     <div className="max-w-6xl mx-auto p-8">
         
@@ -168,8 +195,8 @@ const slides = imageMedia.map((item) => ({
           </h2>
 
           <p className="text-center text-[#C9A227] mb-10">
-            {media.length} ricordi condivisi
-          </p>
+  📸 {imageMedia.length} foto • 🎥 {videoMedia.length} video
+</p>
 
           {media.length === 0 ? (
             <p className="text-center text-gray-500">
@@ -183,7 +210,7 @@ const slides = imageMedia.map((item) => ({
                   key={item.id}
                   className="break-inside-avoid overflow-hidden rounded-2xl shadow-lg bg-white"
                 >
-                 {item.file_type === "image" ? (
+               {item.file_type === "image" ? (
   <img
     src={item.file_url}
     alt="Ricordo del matrimonio"
@@ -198,15 +225,22 @@ const slides = imageMedia.map((item) => ({
     }}
   />
 ) : (
-  <video
-    controls
-    className="w-full cursor-pointer"
+  <div
+    className="cursor-pointer relative"
     onClick={() =>
-      window.open(item.file_url, "_blank")
+      setSelectedVideo(item.file_url)
     }
   >
-    <source src={item.file_url} />
-  </video>
+    <video className="w-full">
+      <source src={item.file_url} />
+    </video>
+
+    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+      <div className="bg-white/80 rounded-full p-4 text-2xl">
+        ▶️
+      </div>
+    </div>
+  </div>
 )}
                 </div>
               ))}
@@ -220,6 +254,36 @@ const slides = imageMedia.map((item) => ({
   slides={slides}
   index={index}
 />
+{selectedVideo && (
+  <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
+    <button
+      onClick={() =>
+        setSelectedVideo(null)
+      }
+      className="
+        absolute
+        top-6
+        right-6
+        text-white
+        text-4xl
+      "
+    >
+      ✕
+    </button>
+
+    <video
+      controls
+      autoPlay
+      className="
+        max-h-[90vh]
+        max-w-[90vw]
+        rounded-2xl
+      "
+    >
+      <source src={selectedVideo} />
+    </video>
+  </div>
+)}
     </main>
   );
 }
