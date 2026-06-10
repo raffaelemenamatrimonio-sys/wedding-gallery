@@ -81,7 +81,7 @@ async function handleDelete(
 
   try {
     const response = await fetch(
-      "/api/admin/delete",
+      "/api/delete",
       {
         method: "POST",
         headers: {
