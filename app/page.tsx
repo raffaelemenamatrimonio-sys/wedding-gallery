@@ -1,65 +1,225 @@
-import Image from "next/image";
+"use client";
+
+import { useRef, useState, useEffect } from "react";
+import { supabase } from "../src/lib/supabase";
+import Lightbox from "yet-another-react-lightbox";
+import "yet-another-react-lightbox/styles.css";
+
+type MediaItem = {
+  id: string;
+  file_url: string;
+  file_type: "image" | "video";
+};
 
 export default function Home() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [uploading, setUploading] = useState(false);
+  const [media, setMedia] = useState<MediaItem[]>([]);
+  const [open, setOpen] = useState(false);
+const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    fetchMedia();
+  }, []);
+
+ async function fetchMedia() {
+  const { data, error } = await supabase
+    .from("media")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Errore recupero media:", error);
+    return;
+  }
+
+  setMedia(data || []);
+}
+
+  const handleUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const files = event.target.files;
+
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+
+    try {
+      for (const file of Array.from(files)) {
+        const fileName = `${Date.now()}-${file.name}`;
+
+        // Upload su Supabase Storage
+        const { data, error } = await supabase.storage
+          .from("wedding-gallery")
+          .upload(fileName, file);
+
+        if (error) {
+          console.error("Errore upload:", error);
+          continue;
+        }
+
+        // Recupera URL pubblica
+        const {
+          data: { publicUrl },
+        } = supabase.storage
+          .from("wedding-gallery")
+          .getPublicUrl(data.path);
+
+        // Salva nel database
+        const { error: dbError } = await supabase
+          .from("media")
+          .insert({
+            file_url: publicUrl,
+            file_type: file.type.startsWith("video")
+              ? "video"
+              : "image",
+            uploader_name: "Invitato",
+          });
+
+        if (dbError) {
+          console.error(
+            "Errore inserimento database:",
+            dbError
+          );
+        }
+      }
+
+      await fetchMedia();
+
+      alert(
+        "❤️ Grazie! I tuoi ricordi sono stati condivisi."
+      );
+    } catch (err) {
+      console.error(err);
+      alert("Si è verificato un errore.");
+    }
+
+    setUploading(false);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+  const imageMedia = media.filter(
+  (item) => item.file_type === "image"
+);
+
+const slides = imageMedia.map((item) => ({
+  src: item.file_url,
+}));
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+  <main className="min-h-screen bg-[#F8F5EF]">
+    {/* HERO */}
+    <section className="relative h-[80vh]">
+      <img
+        src="/coppia.jpg"
+        alt="Raffaele e Filomena"
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+
+      <div className="absolute inset-0 bg-black/40" />
+
+      <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-6">
+        <h1 className="text-white text-5xl md:text-7xl font-serif mb-4">
+          Raffaele & Filomena
+        </h1>
+
+        <div className="w-24 h-[2px] bg-[#C9A227] mb-6" />
+
+        <p className="text-[#F5E6A9] text-xl mb-4">
+          24 Ottobre 2026
+        </p>
+
+        <p className="text-white max-w-2xl text-lg mb-10">
+          Ogni sorriso, ogni abbraccio e ogni momento speciale meritano di essere ricordati.
+          Aiutateci a rivivere questa giornata attraverso i vostri occhi.
+        </p>
+
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="bg-[#0F4C5C] hover:opacity-90 text-white px-8 py-4 rounded-xl transition"
+        >
+          {uploading
+            ? "Caricamento..."
+            : "📸 Condividi i tuoi ricordi"}
+        </button>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*"
+          multiple
+          className="hidden"
+          onChange={handleUpload}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+      </div>
+    </section>
+
+    <div className="max-w-6xl mx-auto p-8">
+        
+        {/* GALLERIA */}
+        <section>
+          <h2 className="text-4xl font-serif text-[#0F4C5C] text-center mb-4">
+            I ricordi del nostro giorno ❤️
+          </h2>
+
+          <p className="text-center text-[#C9A227] mb-10">
+            {media.length} ricordi condivisi
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+          {media.length === 0 ? (
+            <p className="text-center text-gray-500">
+              Nessun ricordo condiviso ancora.
+              Sii il primo a caricare una foto! 📸
+            </p>
+          ) : (
+            <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+              {media.map((item) => (
+                <div
+                  key={item.id}
+                  className="break-inside-avoid overflow-hidden rounded-2xl shadow-lg bg-white"
+                >
+                 {item.file_type === "image" ? (
+  <img
+    src={item.file_url}
+    alt="Ricordo del matrimonio"
+    className="w-full cursor-pointer"
+    onClick={() => {
+      const imageIndex = imageMedia.findIndex(
+        (img) => img.id === item.id
+      );
+
+      setIndex(imageIndex);
+      setOpen(true);
+    }}
+  />
+) : (
+  <video
+    controls
+    className="w-full cursor-pointer"
+    onClick={() =>
+      window.open(item.file_url, "_blank")
+    }
+  >
+    <source src={item.file_url} />
+  </video>
+)}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+      <Lightbox
+  open={open}
+  close={() => setOpen(false)}
+  slides={slides}
+  index={index}
+/>
+    </main>
   );
 }
