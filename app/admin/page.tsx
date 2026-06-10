@@ -69,6 +69,59 @@ export default function AdminPage() {
     );
   }
 
+async function handleDelete(
+  id: string,
+  fileUrl: string
+) {
+  const confirmed = window.confirm(
+    "Sei sicuro di voler eliminare questo ricordo?"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch(
+      "/api/admin/delete",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+        body: JSON.stringify({
+          id,
+          fileUrl,
+        }),
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      console.error(result);
+      alert(
+        result.error ||
+        "Errore durante l'eliminazione."
+      );
+      return;
+    }
+
+  
+    alert("Ricordo eliminato.");
+
+    fetchMedia();
+  } catch (error) {
+    console.error(error);
+
+    alert(
+      "Errore durante l'eliminazione."
+    );
+  }
+}
+
+
+
+
   return (
     <main className="min-h-screen bg-[#F8F5EF] p-8">
       <div className="max-w-6xl mx-auto">
@@ -98,17 +151,37 @@ export default function AdminPage() {
                 </video>
               )}
 
-              <div className="p-4">
-                <a
-                  href={item.file_url}
-                  download
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block w-full text-center bg-[#C9A227] text-white py-2 rounded-xl"
-                >
-                  ⬇️ Scarica
-                </a>
-              </div>
+<div className="p-4 space-y-2">
+  <a
+    href={item.file_url}
+    download
+    target="_blank"
+    rel="noopener noreferrer"
+    className="block w-full text-center bg-[#C9A227] text-white py-2 rounded-xl"
+  >
+    ⬇️ Scarica
+  </a>
+
+  <button
+    onClick={() =>
+      handleDelete(
+        item.id,
+        item.file_url
+      )
+    }
+    className="
+      w-full
+      bg-red-600
+      text-white
+      py-2
+      rounded-xl
+      hover:bg-red-700
+      transition
+    "
+  >
+    🗑️ Elimina
+  </button>
+</div>
             </div>
           ))}
         </div>
