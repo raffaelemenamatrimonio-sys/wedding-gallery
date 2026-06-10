@@ -24,16 +24,12 @@ export async function POST(req: Request) {
         .from("wedding-gallery")
         .remove([path]);
 
-   if (storageError) {
-  console.error("Errore Storage:", storageError);
-
-  return NextResponse.json(
-    {
-      error: storageError.message,
-    },
-    { status: 500 }
-  );
-}
+    if (storageError) {
+      return NextResponse.json(
+        { error: storageError.message },
+        { status: 500 }
+      );
+    }
 
     const { error: dbError } =
       await supabase
@@ -42,15 +38,16 @@ export async function POST(req: Request) {
         .eq("id", id);
 
     if (dbError) {
-      throw dbError;
+      return NextResponse.json(
+        { error: dbError.message },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
       success: true,
     });
-  } catch (error) {
-    console.error(error);
-
+  } catch {
     return NextResponse.json(
       { error: "Errore eliminazione" },
       { status: 500 }
