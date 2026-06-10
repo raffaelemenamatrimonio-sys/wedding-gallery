@@ -9,10 +9,13 @@ type MediaItem = {
   id: string;
   file_url: string;
   file_type: "image" | "video";
+  preferred?: boolean;
 };
 
 export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [favoriteImages, setFavoriteImages] = useState<MediaItem[]>([]);
+const [currentFavorite, setCurrentFavorite] = useState(0);
 
   const [uploading, setUploading] = useState(false);
   const [showThankYou, setShowThankYou] =
@@ -26,6 +29,18 @@ const [selectedVideo, setSelectedVideo] =
   useEffect(() => {
     fetchMedia();
   }, []);
+  useEffect(() => {
+  if (favoriteImages.length <= 1) return;
+
+  const interval = setInterval(() => {
+    setCurrentFavorite((prev) =>
+      (prev + 1) %
+      favoriteImages.length
+    );
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, [favoriteImages]);
 
  async function fetchMedia() {
   const { data, error } = await supabase
@@ -38,7 +53,16 @@ const [selectedVideo, setSelectedVideo] =
     return;
   }
 
-  setMedia(data || []);
+ setMedia(data || []);
+
+const favorites =
+  (data || []).filter(
+    (item) =>
+      item.file_type === "image" &&
+      item.preferred
+  );
+
+setFavoriteImages(favorites);
 }
 
   const handleUpload = async (
@@ -187,6 +211,54 @@ const slides = imageMedia.map((item) => ({
 </section>
 
     <div className="max-w-6xl mx-auto p-8">
+      {favoriteImages.length > 0 && (
+  <section className="mb-16">
+    <h2 className="text-4xl font-serif text-[#0F4C5C] text-center mb-4">
+      ✨ I nostri momenti preferiti ✨
+    </h2>
+
+    <p className="text-center text-[#C9A227] mb-10">
+      Alcuni dei ricordi che ci hanno emozionato di più.
+    </p>
+
+    <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+      <img
+        src={
+          favoriteImages[currentFavorite]
+            .file_url
+        }
+        alt="Momento speciale"
+        className="
+          w-full
+          h-[500px]
+          object-cover
+        "
+      />
+    </div>
+
+    <div className="flex justify-center gap-2 mt-6">
+      {favoriteImages.map((_, i) => (
+        <button
+          key={i}
+          onClick={() =>
+            setCurrentFavorite(i)
+          }
+          className={`
+            w-3
+            h-3
+            rounded-full
+            transition
+            ${
+              i === currentFavorite
+                ? "bg-[#C9A227]"
+                : "bg-gray-300"
+            }
+          `}
+        />
+      ))}
+    </div>
+  </section>
+)}
         
         {/* GALLERIA */}
         <section>
